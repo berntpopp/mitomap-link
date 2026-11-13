@@ -36,10 +36,13 @@ def package_release(
     """Write bundle, manifest, authorization and SHA256SUMS into ``out``; return the manifest."""
     out.mkdir(parents=True, exist_ok=False)
     bundle = out / BUNDLE
-    with database.open("rb") as src, bundle.open("wb") as raw:
-        # mtime=0 and no filename keep the gzip header free of wall-clock/host data.
-        with gzip.GzipFile(filename="", mode="wb", fileobj=raw, compresslevel=9, mtime=0) as gz:
-            shutil.copyfileobj(src, gz)
+    # mtime=0 and no filename keep the gzip header free of wall-clock/host data.
+    with (
+        database.open("rb") as src,
+        bundle.open("wb") as raw,
+        gzip.GzipFile(filename="", mode="wb", fileobj=raw, compresslevel=9, mtime=0) as gz,
+    ):
+        shutil.copyfileobj(src, gz)
     auth = json.loads(authorization.read_text(encoding="utf-8"))
     shutil.copyfile(authorization, out / "data-authorization.json")
     expanded = _sha256(database)

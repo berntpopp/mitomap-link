@@ -37,7 +37,7 @@ _KINDS = {
     "polymorphism": "polymorphism",
 }
 _GENE_LOCUS_TYPES = {"m", "r", "t"}
-MT_LENGTH = 16569
+_VARIANT_PLACEHOLDERS = ", ".join("?" * 18)
 
 SCHEMA = """
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL) WITHOUT ROWID;
@@ -108,11 +108,11 @@ def _covers(locus: Row, position: int) -> bool:
 
 
 def _derived_locus(loci: list[Row], position: int) -> str | None:
-    genes = [
-        loc for loc in loci if loc["type"] in _GENE_LOCUS_TYPES and _covers(loc, position)
-    ]
+    genes = [loc for loc in loci if loc["type"] in _GENE_LOCUS_TYPES and _covers(loc, position)]
     if genes:
-        return "/".join(str(loc["name"]) for loc in sorted(genes, key=lambda r: _int(r["starting"]) or 0))
+        return "/".join(
+            str(loc["name"]) for loc in sorted(genes, key=lambda r: _int(r["starting"]) or 0)
+        )
     control = next((loc for loc in loci if loc["name"] == "MT-CR"), None)
     return "MT-CR" if control is not None and _covers(control, position) else None
 
@@ -182,7 +182,9 @@ def _rcrs_bases(tables: dict[str, list[Row]]) -> list[tuple[int, str]]:
     return sorted((pos, bases.pop()) for pos, bases in seen.items() if len(bases) == 1)
 
 
-def _references(tables: dict[str, list[Row]]) -> tuple[list[tuple[object, ...]], list[tuple[str, int]]]:
+def _references(
+    tables: dict[str, list[Row]],
+) -> tuple[list[tuple[object, ...]], list[tuple[str, int]]]:
     links: set[tuple[str, int]] = set()
     for table in _KINDS:
         key = f"{table}_id"
@@ -245,7 +247,7 @@ def build_database(lines: Iterable[str], out: Path, source: SourceInfo) -> dict[
     try:
         conn.executescript(SCHEMA)
         conn.executemany("INSERT INTO meta VALUES (?, ?)", _meta(tables, source))
-        conn.executemany(f"INSERT INTO variant VALUES ({', '.join('?' * 18)})", variants)
+        conn.executemany(f"INSERT INTO variant VALUES ({_VARIANT_PLACEHOLDERS})", variants)  # noqa: S608
         conn.executemany("INSERT INTO reference VALUES (?, ?, ?, ?, ?)", references)
         conn.executemany("INSERT INTO variant_reference VALUES (?, ?)", links)
         conn.executemany("INSERT INTO rcrs_base VALUES (?, ?)", _rcrs_bases(tables))
