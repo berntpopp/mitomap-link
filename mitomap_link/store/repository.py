@@ -143,9 +143,9 @@ class Repository:
         position_end: int | None = None,
         limit: int,
         offset: int,
-        with_references: bool = False,
+        with_pmids: bool = False,
     ) -> tuple[list[dict[str, Any]], int]:
-        """One page of matching records (optionally with references) and the honest total."""
+        """One page of matching records (optionally with PMIDs) and the honest total."""
         where: list[str] = []
         args: list[Any] = []
         if record_type == "disease_mutation":
@@ -153,7 +153,8 @@ class Repository:
         elif record_type == "polymorphism":
             where.append("kind = 'polymorphism'")
         if locus is not None:
-            names = self._locus_index.get(locus.strip().upper())
+            token = locus.strip().upper()
+            names = self._locus_index.get(token) or self._locus_index.get(f"MT-{token}")
             if names is None:
                 raise InvalidInputError(
                     "Unknown MITOMAP locus.",
@@ -185,9 +186,9 @@ class Repository:
             [*args, limit, offset],
         )
         page = [dict(row) for row in rows]
-        if with_references:
+        if with_pmids:
             for record in page:
-                record["references"] = self._references(record["id"])
+                record["pmids"] = [r["pmid"] for r in self._references(record["id"]) if r["pmid"]]
         return page, int(total)
 
 

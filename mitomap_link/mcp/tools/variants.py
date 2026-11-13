@@ -31,8 +31,9 @@ ResponseMode = Annotated[
     ResponseModeValue,
     Field(
         description="Verbosity: minimal (ids, locus, disease, status) | compact (default; + "
-        "alleles, plasmy, GenBank counts, reference_count) | standard (+ up to 10 references "
-        "with fenced titles) | full (+ every reference and every PMID)."
+        "alleles, plasmy, GenBank counts, reference_count) | standard (get_variant: + up to 10 "
+        "references with fenced titles; search_variants: + up to 10 PMIDs) | full (get_variant: "
+        "+ up to 50 references and every PMID; search_variants: + every PMID)."
     ),
 ]
 Position = Annotated[
@@ -195,7 +196,7 @@ def register_variant_tools(mcp: FastMCP) -> None:
                 position_end=position_end,
                 limit=limit,
                 offset=offset,
-                with_references=response_mode in ("standard", "full"),
+                with_pmids=response_mode in ("standard", "full"),
             )
             page = [project_record(r, response_mode, repo.meta) for r in rows]
             more = offset + len(page) < total

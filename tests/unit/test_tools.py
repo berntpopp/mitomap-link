@@ -102,7 +102,13 @@ async def test_search_full_adds_references_over_compact(facade: Any, structured:
     compact = await _call(facade, structured, "search_variants", args)
     full = await _call(facade, structured, "search_variants", {**args, "response_mode": "full"})
     assert "references" not in compact["results"][0]
-    assert full["results"][0]["references"] and full["results"][0]["pmids"]
+    # Search rows carry PMIDs, never per-row fenced titles (object/byte ceilings).
+    assert "references" not in full["results"][0] and full["results"][0]["pmids"]
+    standard = await _call(
+        facade, structured, "search_variants", {**args, "response_mode": "standard"}
+    )
+    assert "references" not in standard["results"][0]
+    assert len(standard["results"][0]["pmids"]) <= 10
 
 
 async def test_invalid_input_messages_name_the_reason(facade: Any, structured: Any) -> None:
@@ -126,7 +132,9 @@ async def test_non_date_status_note_is_not_called_a_date(facade: Any, structured
     dated = project_record({**base, "status_date": "2022.04.13"}, "compact", {})
     noted = project_record({**base, "status_date": "Reported by paper as VUS"}, "compact", {})
     assert dated["status_date"] == "2022.04.13" and dated["status_note"] is None
-    assert noted["status_date"] is None and noted["status_note"] == "Reported by paper as VUS"
+    assert noted["status_date"] is None
+    assert noted["status_note"]["kind"] == "untrusted_text"
+    assert noted["status_note"]["text"] == "Reported by paper as VUS"
 
 
 async def test_standard_mode_keeps_pmids_for_full(facade: Any, structured: Any) -> None:
@@ -139,10 +147,37 @@ async def test_standard_mode_keeps_pmids_for_full(facade: Any, structured: Any) 
 
 async def test_disease_query_accepts_alternatives(facade: Any, structured: Any) -> None:
     env = await _call(facade, structured, "search_variants", {"disease_query": "MERRF|LHON"})
-    diseases = " ".join(r["disease"] for r in env["results"])
+    diseases = " ".join(r["disease"]["text"] for r in env["results"])
     assert "MERRF" in diseases and "LHON" in diseases
 
 
 async def test_dbsnp_id_gets_its_own_reason(facade: Any, structured: Any) -> None:
     env = await _call(facade, structured, "get_variant", {"variant": "rs199474657"})
     assert "dbSNP" in env["message"]
+
+
+async def test_disease_text_is_fenced_at_every_mode(facade: Any, structured: Any) -> None:
+    for mode in ("minimal", "compact"):
+        env = await _call(
+            facade, structured, "get_variant", {"variant": "m.3243A>G", "response_mode": mode}
+        )
+        disease = env["records"][0]["disease"]
+        assert disease["kind"] == "untrusted_text" and "MELAS" in disease["text"]
+        assert disease["provenance"]["record_id"] == env["records"][0]["mitomap_record_id"]
+
+
+def test_full_mode_caps_fenced_reference_objects() -> None:
+    from mitomap_link.mcp.shaping import FULL_REFERENCE_LIMIT, project_record
+
+    refs = [{"pmid": str(i), "year": 2000, "title": f"t{i}", "journal": "j"} for i in range(60)]
+    rec = {"id": "x", "kind": "mutation_rna", "position": 1, "references": refs}
+    out = project_record(rec, "full", {})
+    assert len(out["references"]) == FULL_REFERENCE_LIMIT < 60
+    assert out["references_truncated"] is True and len(out["pmids"]) == 60
+    assert out["reference_count"] == 60
+
+
+async def test_bare_mito_gene_symbol_is_accepted(facade: Any, structured: Any) -> None:
+    bare = await _call(facade, structured, "search_variants", {"locus": "atp6"})
+    full = await _call(facade, structured, "search_variants", {"locus": "MT-ATP6"})
+    assert bare["success"] is True and bare["total"] == full["total"] > 0

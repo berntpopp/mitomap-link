@@ -6,6 +6,17 @@ All notable changes to mitomap-link are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- `get_variant(response_mode=full)` capped at 50 fenced reference titles per record (every
+  PMID still in `pmids`); m.3243A>G full was 215 KB / 496 fenced objects, over the
+  Response-Envelope v1.1 128-object ceiling.
+- `search_variants` standard/full return PMIDs per row instead of per-row fenced titles
+  (a 20-row page held 200 fenced objects).
+- MITOMAP `disease` text and `status_note` are now fenced `untrusted_text` at every
+  response_mode (Response-Envelope v1.1); read `.text`.
+- `search_variants(locus=)` accepts bare mitochondrial gene symbols (`ATP6`, `ND4`, `TL1`).
+
 ## [0.1.0] - 2026-11-13
 
 ### Added

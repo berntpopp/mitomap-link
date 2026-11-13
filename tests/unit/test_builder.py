@@ -81,3 +81,9 @@ def test_rcrs_bases_and_meta(db: sqlite3.Connection) -> None:
 
 def test_build_is_byte_deterministic(tmp_path: Path) -> None:
     assert _build(tmp_path, "a.sqlite").read_bytes() == _build(tmp_path, "b.sqlite").read_bytes()
+
+
+def test_submitter_contact_tables_are_never_read() -> None:
+    from mitomap_link.ingest.build import TABLES
+
+    assert not {t for t in TABLES if t == "unpublished" or t.startswith("submitted_variant")}
