@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "reviewer": "Repository owner (explicit operator decision recorded 2026-11-13)",
+  "reviewed_at": "2026-11-13T00:00:00Z",
+  "quote": "Approved to build: MITOMAP is CC BY 3.0 (MITOWIKI HelpTerms); ship a snapshot of the daily mitomap.dump.sql.gz.",
+  "reference": "https://github.com/berntpopp/genefoundry-router/issues/189#issuecomment-6847304104",
+  "license_name": "Creative Commons Attribution 3.0 (CC BY 3.0)",
+  "license_spdx": "CC-BY-3.0",
+  "terms_url": "https://web.archive.org/web/20260312104539/https://mitomap.org/foswiki/bin/view/MITOWIKI/HelpTerms",
+  "terms_excerpt": "All content on MITOWeb (including MITOMAP, MITOMASTER, & MITOWIKI) except where otherwise noted, is made available under a Creative Commons Attribution 3.0 License. Authors retain ownership of the copyright of their contributions, while allowing anyone to download, reuse, reprint, modify, distribute, and/or copy content, so long as the original authors and source are cited.",
+  "attribution": "MITOMAP: A Human Mitochondrial Genome Database. https://www.mitomap.org. Lott MT, Leipzig JN, Derbeneva O, Xie HM, Chalkia D, Sarmady M, Procaccio V, Wallace DC. mtDNA Variation and Analysis Using MITOMAP and MITOMASTER. Curr Protoc Bioinformatics. 2013;44:1.23.1-26. doi:10.1002/0471250953.bi0123s44",
+  "scope": "A derived SQLite subset (disease mutations, polymorphisms, GenBank counts, literature references, loci) of the MITOMAP daily PostgreSQL dump. Submitter contact tables are excluded. Values are served unmodified apart from reshaping.",
+  "interpretation": "The repository owner's own determination that redistributing this derived, attributed research-use snapshot is permitted under CC BY 3.0. This is not an approval by MITOMAP or the Children's Hospital of Philadelphia, and not a legal opinion.",
+  "disclaimer": "Research use only; not clinical decision support. MITOMAP status ('Reported', 'Cfrm', ...) is a report of published literature, not an assignment of pathogenicity."
+}
