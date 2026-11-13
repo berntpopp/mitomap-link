@@ -6,6 +6,13 @@ All notable changes to mitomap-link are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-11-13
+
+### Changed
+
+- Rebuilt on the current `python:3.14-slim` base image digest
+  (`sha256:9aaa4740…`, #2); CodeQL action v4.39.1 -> v4.39.3 in CI (#3, no image change).
+
 ## [0.1.1] - 2026-11-13
 
 ### Fixed
