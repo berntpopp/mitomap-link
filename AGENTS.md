@@ -46,8 +46,9 @@ snapshot, licence, data releases), `deployment.md`, `usage.md`.
   text stay verbatim; missing stays null; nothing is inferred (no heteroplasmy, no
   haplogroup, no pathogenicity call). Only rCRS (NC_012920.1) is accepted
   (`variant_ids.py`); other mitochondrial references are rejected, never remapped.
-- **Upstream prose is fenced** (`mcp/untrusted_content.py`, Response-Envelope v1.1) and
-  (reference titles) only appears at `response_mode=standard|full`. Never surface an upstream string
+- **Upstream prose is fenced** (`mcp/untrusted_content.py`, Response-Envelope v1.1):
+  `disease` and `status_note` at every mode, reference titles (get_variant only, ≤50 per
+  record) at `response_mode=standard|full`; search rows carry PMIDs, never titles. Never surface an upstream string
   unfenced unless it passes an identifier grammar.
 - **The MCP layer owns the envelope.** `mcp/envelope.run_mcp_tool` injects
   `success`/`_meta`, converts exceptions into typed error envelopes with `isError`, and

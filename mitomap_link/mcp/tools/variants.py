@@ -19,7 +19,7 @@ from mitomap_link.mcp.envelope import McpErrorContext, run_mcp_tool
 from mitomap_link.mcp.next_commands import after_search, after_variant
 from mitomap_link.mcp.service_adapters import get_repository
 from mitomap_link.mcp.shaping import ResponseModeValue, project_record
-from mitomap_link.store.repository import RecordType, StatusCategory
+from mitomap_link.store.repository import RecordType, SortBy, StatusCategory
 from mitomap_link.variant_ids import MT_LENGTH, gnomad_variant_id, hgvs, parse_variant
 
 if TYPE_CHECKING:
@@ -31,8 +31,9 @@ ResponseMode = Annotated[
     ResponseModeValue,
     Field(
         description="Verbosity: minimal (ids, locus, disease, status) | compact (default; + "
-        "alleles, plasmy, GenBank counts, reference_count) | standard (+ up to 10 references "
-        "with fenced titles) | full (+ every reference and every PMID)."
+        "alleles, plasmy, GenBank counts, reference_count) | standard (get_variant: + up to 10 "
+        "references with fenced titles; search_variants: + up to 10 PMIDs) | full (get_variant: "
+        "+ up to 50 references and every PMID; search_variants: + every PMID)."
     ),
 ]
 Position = Annotated[
@@ -134,9 +135,11 @@ def register_variant_tools(mcp: FastMCP) -> None:
             "MITOMAP status category and/or an rCRS position range. record_type defaults to "
             "disease_mutation (MITOMAP's coding/control and rRNA/tRNA mutation lists); use "
             "polymorphism or any for population polymorphisms. Unknown loci are rejected. "
-            "Ordered by position; returns results with total/truncated/next_offset. "
-            "Signature: search_variants(locus=, disease_query=, status=, record_type=, "
-            "position_start=, position_end=, limit=, offset=, response_mode=)."
+            "Ordered by position, or by MITOMAP reference count with "
+            "sort_by='reference_count' (most-published first); returns results with "
+            "total/truncated/next_offset. Signature: search_variants(locus=, disease_query=, "
+            "status=, record_type=, position_start=, position_end=, sort_by=, limit=, offset=, "
+            "response_mode=)."
         ),
     )
     async def search_variants(
@@ -153,8 +156,8 @@ def register_variant_tools(mcp: FastMCP) -> None:
             Field(
                 max_length=100,
                 description="Case-insensitive substring of MITOMAP's disease text, e.g. "
-                "'Leigh', 'LHON', 'MELAS'; separate up to 5 alternatives with '|' "
-                "(Leigh|NARP|MILS).",
+                "'Leigh', 'LHON', 'MELAS'. Up to 5 alternatives (any matches) separated by "
+                "'|', ' / ' or ' OR ': Leigh|NARP|MILS.",
                 examples=["Leigh"],
             ),
         ] = None,
@@ -171,6 +174,13 @@ def register_variant_tools(mcp: FastMCP) -> None:
         ] = "disease_mutation",
         position_start: Position = None,
         position_end: Position = None,
+        sort_by: Annotated[
+            SortBy,
+            Field(
+                description="position (default, rCRS order) or reference_count (most "
+                "MITOMAP-cited first; ties by position)."
+            ),
+        ] = "position",
         limit: Annotated[
             int, Field(ge=1, le=MAX_SEARCH_LIMIT, description="Page size (1-100, default 20).")
         ] = 20,
@@ -195,7 +205,8 @@ def register_variant_tools(mcp: FastMCP) -> None:
                 position_end=position_end,
                 limit=limit,
                 offset=offset,
-                with_references=response_mode in ("standard", "full"),
+                with_pmids=response_mode in ("standard", "full"),
+                sort_by=sort_by,
             )
             page = [project_record(r, response_mode, repo.meta) for r in rows]
             more = offset + len(page) < total

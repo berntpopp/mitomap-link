@@ -124,6 +124,7 @@ _INVALID_REASON_MESSAGE: dict[str, str] = {
 # ``hint`` is NOT surfaced (it could carry copied prose); ``field`` +
 # ``allowed_values`` already carry the validated, actionable detail.
 _INVALID_INPUT_HINT = "Correct the offending argument (see field and allowed_values), then retry."
+_INVALID_INPUT_HINT_NO_VALUES = "Correct the offending argument named in field, then retry."
 
 
 def _classify(exc: BaseException) -> tuple[str, str]:
@@ -182,7 +183,12 @@ def _error_envelope(exc: BaseException, context: McpErrorContext) -> dict[str, A
         if exc.allowed is not None:
             envelope["allowed_values"] = safe_allowed_values(exc.allowed)  # drop prose
         if exc.hint is not None:
-            envelope["hint"] = _INVALID_INPUT_HINT  # fixed server string, not exc.hint
+            # Fixed server string, not exc.hint; only cite allowed_values when present.
+            envelope["hint"] = (
+                _INVALID_INPUT_HINT
+                if "allowed_values" in envelope
+                else _INVALID_INPUT_HINT_NO_VALUES
+            )
         if exc.did_you_mean is not None:
             # A suggestion drawn from a CLOSED server vocabulary; validated through the
             # allowed-value grammar (drops anything prose-like) before it is surfaced.

@@ -13,12 +13,18 @@ ResponseModeValue = Literal["minimal", "compact", "standard", "full"]
 RESPONSE_MODES: tuple[str, ...] = ("minimal", "compact", "standard", "full")
 DEFAULT_RESPONSE_MODE = "compact"
 STANDARD_REFERENCE_LIMIT = 10
+# Fenced titles per record at full; keeps one response under the v1.1 128-object ceiling
+# (an allele has at most two records). Every PMID is still returned.
+FULL_REFERENCE_LIMIT = 50
+CR_START, CR_END = 16024, 576  # MITOMAP locus MT-CR wraps the origin
 _BRACKET = re.compile(r"\[([^\]]{1,40})\]")
 _DATE = re.compile(r"^\d{4}\.\d{2}\.\d{2}$")
 
 
-def _genbank(count: int | None, total: str | None) -> dict[str, Any]:
+def _genbank(count: int | None, total: str | None, *, applicable: bool = True) -> dict[str, Any]:
     denominator = int(total) if total and total.isdigit() else None
+    if not applicable:  # control-region sequences cannot carry a coding/RNA allele
+        return {"count": None, "total_sequences": denominator, "status": "outside_control_region"}
     if count is None:
         return {"count": None, "total_sequences": denominator, "status": "not_tabulated"}
     frequency = round(count / denominator, 6) if denominator else None
@@ -31,12 +37,16 @@ def _reference(ref: dict[str, Any], record_id: str) -> dict[str, Any]:
         "pmid": ref.get("pmid"),
         "year": ref.get("year"),
         "journal": ref.get("journal"),
-        "title": None
-        if title is None
-        else fence_untrusted_text(title, source=SOURCE_NAME, record_id=record_id).model_dump(
-            mode="json"
-        ),
+        "title": _fence(title, record_id),
     }
+
+
+def _fence(text: str | None, record_id: str) -> dict[str, Any] | None:
+    if text is None:
+        return None
+    return fence_untrusted_text(text, source=SOURCE_NAME, record_id=record_id).model_dump(
+        mode="json"
+    )
 
 
 def project_record(record: dict[str, Any], mode: str, meta: dict[str, str]) -> dict[str, Any]:
@@ -47,7 +57,7 @@ def project_record(record: dict[str, Any], mode: str, meta: dict[str, str]) -> d
         "record_type": record["kind"],
         "hgvs": record.get("hgvs"),
         "locus": record.get("locus"),
-        "disease": record.get("disease"),
+        "disease": _fence(record.get("disease"), record["id"]),
         "mitomap_status": status,
     }
     if mode == "minimal":
@@ -68,7 +78,7 @@ def project_record(record: dict[str, Any], mode: str, meta: dict[str, str]) -> d
         mitomap_status_category=status_category(status),
         clingen_classification_in_status=bracket.group(1).strip() if bracket else None,
         status_date=status_date if is_date else None,
-        status_note=None if is_date else status_date,
+        status_note=None if is_date else _fence(status_date, f"{record['id']}#status_note"),
         plasmy_reported={
             "homoplasmy": record.get("homoplasmy"),
             "heteroplasmy": record.get("heteroplasmy"),
@@ -78,18 +88,23 @@ def project_record(record: dict[str, Any], mode: str, meta: dict[str, str]) -> d
                 record.get("gb_fl_count"), meta.get("genbank_full_length_total")
             ),
             "control_region": _genbank(
-                record.get("gb_cr_count"), meta.get("genbank_control_region_total")
+                record.get("gb_cr_count"),
+                meta.get("genbank_control_region_total"),
+                applicable=not CR_END < record["position"] < CR_START,
             ),
         },
     )
-    if references is None:
+    if references is None:  # a search row: PMIDs only, titles live on get_variant
         out["reference_count"] = record.get("reference_count")
+        pmids = record.get("pmids")
+        if pmids is not None and mode in ("standard", "full"):
+            out["pmids"] = pmids if mode == "full" else pmids[:STANDARD_REFERENCE_LIMIT]
         return out
     out["reference_count"] = len(references)
     if mode == "full":
         out["pmids"] = [r["pmid"] for r in references if r.get("pmid")]
     if mode in ("standard", "full"):
-        shown = references if mode == "full" else references[:STANDARD_REFERENCE_LIMIT]
+        shown = references[: FULL_REFERENCE_LIMIT if mode == "full" else STANDARD_REFERENCE_LIMIT]
         out["references"] = [
             _reference(ref, f"{record['id']}#reference{i}") for i, ref in enumerate(shown)
         ]
