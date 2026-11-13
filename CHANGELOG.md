@@ -6,6 +6,8 @@ All notable changes to mitomap-link are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-13
+
 ### Fixed
 
 - `get_variant(response_mode=full)` capped at 50 fenced reference titles per record (every

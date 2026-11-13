@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mitomap-link"
-version = "0.1.0"
+version = "0.1.1"
 description = "MCP server for MITOMAP mitochondrial DNA variants: disease mutations, MITOMAP status, plasmy, GenBank frequency"
 readme = "README.md"
 license = { text = "MIT" }
