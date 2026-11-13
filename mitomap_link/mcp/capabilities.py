@@ -10,7 +10,7 @@ from mitomap_link.buildinfo import build_info
 from mitomap_link.config import settings
 from mitomap_link.constants import (
     GENBANK_SEMANTICS,
-    LICENSE,
+    LICENSE_STATEMENT,
     MAX_SEARCH_LIMIT,
     PLASMY_SEMANTICS,
     RECOMMENDED_CITATION,
@@ -55,7 +55,7 @@ def build_capabilities() -> dict[str, Any]:
         "research_use_only": True,
         "research_use_notice": RESEARCH_USE_NOTICE,
         "recommended_citation": RECOMMENDED_CITATION,
-        "license": LICENSE,
+        "license": LICENSE_STATEMENT,
         "tools": TOOLS,
         "tool_count": len(TOOLS),
         "response_modes": list(RESPONSE_MODES),
@@ -109,7 +109,7 @@ def build_capabilities() -> dict[str, Any]:
         ),
         "recommended_workflows": [
             "variant -> get_variant -> gnomad_get_mitochondrial_variant (population context)",
-            "gene -> search_variants(locus=MT-ATP6) -> get_variant",
+            "gene -> search_variants(locus=MT-ATP6, sort_by=reference_count) -> get_variant",
             "phenotype -> search_variants(disease_query='Leigh', status='confirmed')",
             "position -> search_variants(position_start=, position_end=, record_type='any')",
         ],

@@ -16,12 +16,15 @@ STANDARD_REFERENCE_LIMIT = 10
 # Fenced titles per record at full; keeps one response under the v1.1 128-object ceiling
 # (an allele has at most two records). Every PMID is still returned.
 FULL_REFERENCE_LIMIT = 50
+CR_START, CR_END = 16024, 576  # MITOMAP locus MT-CR wraps the origin
 _BRACKET = re.compile(r"\[([^\]]{1,40})\]")
 _DATE = re.compile(r"^\d{4}\.\d{2}\.\d{2}$")
 
 
-def _genbank(count: int | None, total: str | None) -> dict[str, Any]:
+def _genbank(count: int | None, total: str | None, *, applicable: bool = True) -> dict[str, Any]:
     denominator = int(total) if total and total.isdigit() else None
+    if not applicable:  # control-region sequences cannot carry a coding/RNA allele
+        return {"count": None, "total_sequences": denominator, "status": "outside_control_region"}
     if count is None:
         return {"count": None, "total_sequences": denominator, "status": "not_tabulated"}
     frequency = round(count / denominator, 6) if denominator else None
@@ -85,7 +88,9 @@ def project_record(record: dict[str, Any], mode: str, meta: dict[str, str]) -> d
                 record.get("gb_fl_count"), meta.get("genbank_full_length_total")
             ),
             "control_region": _genbank(
-                record.get("gb_cr_count"), meta.get("genbank_control_region_total")
+                record.get("gb_cr_count"),
+                meta.get("genbank_control_region_total"),
+                applicable=not CR_END < record["position"] < CR_START,
             ),
         },
     )

@@ -12,7 +12,9 @@ RECOMMENDED_CITATION = (
     "2013;44:1.23.1-26. doi:10.1002/0471250953.bi0123s44"
 )
 
-LICENSE = (
+# Stamped on every data response, so kept short; the full statement is LICENSE_STATEMENT.
+LICENSE = "CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/); cite recommended_citation."
+LICENSE_STATEMENT = (
     "MITOMAP content is licensed CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/): "
     "reuse and redistribution are permitted so long as the original authors and source are "
     "cited. mitomap-link serves a derived snapshot of the MITOMAP daily dump, unmodified apart "
@@ -44,7 +46,9 @@ GENBANK_SEMANTICS = (
     "genbank.full_length / control_region: MITOMAP's count of GenBank sequences carrying the "
     "exact allele, over its sequence totals; frequency = count / total_sequences. GenBank "
     "sequences are not hand-curated and include patients. count is null (status "
-    "not_tabulated) when MITOMAP lists no count for that allele representation."
+    "not_tabulated) when MITOMAP lists no count for that allele representation, and "
+    "control_region count is null (status outside_control_region) for alleles outside "
+    "m.16024-576, which control-region sequences do not cover."
 )
 
 MAX_SEARCH_LIMIT = 100

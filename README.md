@@ -69,8 +69,8 @@ the GeneFoundry Tool-Naming Standard v1. The canonical gateway namespace token i
 `mitomap`: behind [`genefoundry-router`](https://github.com/berntpopp/genefoundry-router)
 these surface as `mitomap_<tool>` (e.g. `mitomap_get_variant`).
 
-Every response carries `_meta.next_commands` and `recommended_citation`, and honours
-`response_mode ∈ {minimal, compact, standard, full}` (default `compact`). See
+Every response carries `_meta.next_commands`; every data response carries
+`recommended_citation`. Data tools honour `response_mode ∈ {minimal, compact, standard, full}` (default `compact`). See
 [Usage](docs/usage.md).
 
 ## Data & provenance

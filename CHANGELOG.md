@@ -16,6 +16,17 @@ All notable changes to mitomap-link are documented here. The format follows
 - MITOMAP `disease` text and `status_note` are now fenced `untrusted_text` at every
   response_mode (Response-Envelope v1.1); read `.text`.
 - `search_variants(locus=)` accepts bare mitochondrial gene symbols (`ATP6`, `ND4`, `TL1`).
+- `genbank.control_region` is `count: null, status: outside_control_region` for alleles
+  outside m.16024-576 (MITOMAP's 0 there meant "not covered", not "absent").
+- `invalid_input` hints only point at `allowed_values` when the envelope carries them.
+- Data responses carry a short `license`; the full redistribution statement stays in
+  `get_server_capabilities`.
+
+### Added
+
+- `search_variants(sort_by="reference_count")` ranks the most-published records first.
+- `disease_query` also splits alternatives on a spaced ` / ` (MITOMAP's own separator)
+  and ` OR `.
 
 ## [0.1.0] - 2026-11-13
 

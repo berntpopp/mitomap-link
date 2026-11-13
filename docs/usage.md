@@ -24,6 +24,7 @@ get_variant(variant="m.3243A>G")
 **Variants in a gene, or for a phenotype**
 ```
 search_variants(locus="MT-ATP6")                                  → disease mutations, paged
+search_variants(locus="ATP6", sort_by="reference_count")          → most-published first
 search_variants(disease_query="Leigh|NARP|MILS", status="confirmed", limit=50)
 search_variants(position_start=8527, position_end=9207, record_type="any")
 ```

@@ -13,6 +13,13 @@ from mitomap_link.variant_ids import VariantQuery
 
 StatusCategory = Literal["reported", "confirmed", "conflicting_reports", "unclear"]
 RecordType = Literal["disease_mutation", "polymorphism", "any"]
+SortBy = Literal["position", "reference_count"]
+_ORDER = {
+    "position": "position, kind, id",
+    "reference_count": "reference_count DESC, position, kind, id",
+}
+# Alternatives in disease_query: '|', a spaced ' / ' (MITOMAP's own separator) or ' OR '.
+_ALTERNATIVES = re.compile(r"\||\s/\s|\sOR\s")
 STATUS_PREFIX: dict[str, str] = {
     "reported": "Reported",
     "confirmed": "Cfrm",
@@ -144,6 +151,7 @@ class Repository:
         limit: int,
         offset: int,
         with_pmids: bool = False,
+        sort_by: str = "position",
     ) -> tuple[list[dict[str, Any]], int]:
         """One page of matching records (optionally with PMIDs) and the honest total."""
         where: list[str] = []
@@ -165,7 +173,7 @@ class Repository:
                 )
             where.append(f"locus IN ({', '.join('?' * len(names))})")
             args += names
-        terms = [t.strip() for t in (disease_query or "").split("|") if t.strip()][:5]
+        terms = [t.strip() for t in _ALTERNATIVES.split(disease_query or "") if t.strip()][:5]
         if terms:
             where.append("(" + " OR ".join(["disease LIKE ? ESCAPE '\\'"] * len(terms)) + ")")
             args += [f"%{re.sub(r'([\\%_])', r'\\\1', term)}%" for term in terms]
@@ -182,7 +190,7 @@ class Repository:
         total = self._conn.execute(f"SELECT COUNT(*) FROM variant v{clause}", args).fetchone()[0]  # noqa: S608
         rows = self._conn.execute(
             f"SELECT v.*, {_REF_COUNT} AS reference_count FROM variant v{clause} "  # noqa: S608
-            "ORDER BY position, kind, id LIMIT ? OFFSET ?",
+            f"ORDER BY {_ORDER[sort_by]} LIMIT ? OFFSET ?",
             [*args, limit, offset],
         )
         page = [dict(row) for row in rows]

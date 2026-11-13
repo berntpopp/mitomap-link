@@ -181,3 +181,38 @@ async def test_bare_mito_gene_symbol_is_accepted(facade: Any, structured: Any) -
     bare = await _call(facade, structured, "search_variants", {"locus": "atp6"})
     full = await _call(facade, structured, "search_variants", {"locus": "MT-ATP6"})
     assert bare["success"] is True and bare["total"] == full["total"] > 0
+
+
+async def test_search_sorts_by_reference_count(facade: Any, structured: Any) -> None:
+    env = await _call(
+        facade, structured, "search_variants", {"locus": "MT-ATP6", "sort_by": "reference_count"}
+    )
+    counts = [r["reference_count"] for r in env["results"]]
+    assert counts == sorted(counts, reverse=True) and counts[0] > counts[-1]
+
+
+async def test_disease_query_accepts_spaced_slash_and_or(facade: Any, structured: Any) -> None:
+    piped = await _call(facade, structured, "search_variants", {"disease_query": "MERRF|LHON"})
+    for query in ("MERRF / LHON", "MERRF OR LHON"):
+        env = await _call(facade, structured, "search_variants", {"disease_query": query})
+        assert env["total"] == piped["total"] > 0, query
+
+
+async def test_control_region_count_is_not_applicable_outside_it(
+    facade: Any, structured: Any
+) -> None:
+    env = await _call(facade, structured, "get_variant", {"variant": "m.3243A>G"})
+    cr = env["records"][0]["genbank"]["control_region"]
+    assert cr["count"] is None and cr["status"] == "outside_control_region"
+    assert "frequency" not in cr
+    env = await _call(facade, structured, "get_variant", {"variant": "m.73A>G"})
+    assert env["records"][0]["genbank"]["control_region"]["count"] > 0
+
+
+async def test_hint_only_points_at_allowed_values_when_present(
+    facade: Any, structured: Any
+) -> None:
+    env = await _call(facade, structured, "get_variant", {"variant": "m.17000A>G"})
+    assert "allowed_values" not in env and "allowed_values" not in env["hint"]
+    env = await _call(facade, structured, "get_variant", {"variant": "m.3243C>G"})
+    assert env["allowed_values"] == ["A"] and "allowed_values" in env["hint"]
