@@ -34,17 +34,20 @@ class InvalidInputError(MitomapError):
         allowed: list[str] | None = None,
         hint: str | None = None,
         did_you_mean: list[str] | None = None,
+        reason: str | None = None,
     ) -> None:
         """Initialise with the offending field and optional recovery data.
 
         ``allowed``/``hint``/``did_you_mean`` surface as structured envelope keys; they
-        are re-validated there and never copied as prose.
+        are re-validated there and never copied as prose. ``reason`` selects a fixed,
+        server-authored message from a closed table in the envelope.
         """
         super().__init__(message)
         self.field = field
         self.allowed = allowed
         self.hint = hint
         self.did_you_mean = did_you_mean
+        self.reason = reason
 
 
 class NotFoundError(MitomapError):
@@ -53,15 +56,6 @@ class NotFoundError(MitomapError):
     def __init__(self, message: str = "No matching MITOMAP record found.") -> None:
         """Initialise with a 404 status code."""
         super().__init__(message, status_code=404)
-
-
-class AmbiguousQueryError(MitomapError):
-    """A query matched several records and cannot be resolved unambiguously."""
-
-    def __init__(self, message: str, *, candidates: list[dict[str, str]] | None = None) -> None:
-        """Store the ambiguous candidates (``locus_id``/``gene``) for the envelope."""
-        super().__init__(message)
-        self.candidates = candidates or []
 
 
 class DataUnavailableError(MitomapError):

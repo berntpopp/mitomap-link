@@ -1,0 +1,33 @@
+# CITATION.cff — GENERATED. Do not edit.
+# Source: genefoundry-router/fleet-metadata.yaml + this repo's pyproject.toml.
+# Regenerate: `make citation-write` in genefoundry-router.
+# See genefoundry-router/docs/REPO-METADATA-STANDARD-v1.md.
+cff-version: 1.2.0
+message: If you use this software, please cite it as below.
+title: mitomap-link
+abstract: 'MCP server for MITOMAP: mitochondrial DNA (mtDNA) disease mutations and polymorphisms with MITOMAP
+  status, plasmy, GenBank frequency and literature from a pinned snapshot, for LLM agents.'
+type: software
+authors:
+- family-names: Popp
+  given-names: Bernt
+  email: bernt.popp@charite.de
+  affiliation: Charité – Universitätsmedizin Berlin
+version: 0.1.0
+license: MIT
+repository-code: https://github.com/berntpopp/mitomap-link
+url: https://genefoundry.org
+keywords:
+- bioinformatics
+- claude
+- fastmcp
+- genefoundry
+- genetics
+- llm-tools
+- mcp
+- mcp-server
+- mitochondrial-dna
+- mitomap
+- model-context-protocol
+- mtdna
+- rare-disease

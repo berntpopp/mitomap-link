@@ -1,0 +1,119 @@
+# Nginx Proxy Manager deployment overlay for mitomap-link.
+#
+# Self-contained (used standalone, not layered on docker-compose.yml). The data
+# init sidecar joins only the private stack network, verifies the pinned data
+# release into a named volume and exits; one unified container then serves
+# /health and the MCP streamable-HTTP transport on /mcp via a single port (8000).
+# NPM reverse-proxies to the fixed container_name on the shared npm_default network.
+#
+#   docker compose -f docker/docker-compose.npm.yml --env-file .env.docker up -d
+name: mitomap-link-npm
+
+services:
+  mitomap-data-init:
+    image: ${MITOMAP_LINK_IMAGE:?Set MITOMAP_LINK_IMAGE to ghcr.io/berntpopp/mitomap-link@sha256:<digest>}
+    pull_policy: missing
+    entrypoint: ["mitomap-link-data"]
+    command: ["materialize"]
+    environment:
+      - MITOMAP_LINK_DATA__REFERENCE_ROOT=/data
+    volumes:
+      - mitomap-reference:/data
+    networks:
+      - mitomap_link_internal_net
+    restart: "no"
+    # GeneFoundry deploy contract: numeric non-root uid:gid, THIS image's own (docker/Dockerfile).
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1.0"
+          pids: 256
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  mitomap_link:
+    # Deploy pulls the released, attested image; it never builds from source.
+    # Pin a digest, not a tag: there is no `latest`, and only a digest is immutable.
+    image: ${MITOMAP_LINK_IMAGE:?Set MITOMAP_LINK_IMAGE to ghcr.io/berntpopp/mitomap-link@sha256:<digest>}
+    pull_policy: missing
+    container_name: mitomap-link-npm
+    depends_on:
+      mitomap-data-init:
+        condition: service_completed_successfully
+    # NO published host ports - NPM handles all routing via the container name.
+    expose:
+      - "8000"
+    environment:
+      - MITOMAP_LINK_HOST=0.0.0.0
+      - MITOMAP_LINK_PORT=8000
+      - MITOMAP_LINK_TRANSPORT=unified
+      - MITOMAP_LINK_MCP_PATH=/mcp
+      - 'MITOMAP_LINK_ALLOWED_HOSTS=["localhost","127.0.0.1","::1","mitomap-link.genefoundry.org"]'
+      - MITOMAP_LINK_LOG_LEVEL=${LOG_LEVEL_API:-INFO}
+      - MITOMAP_LINK_LOG_FORMAT=json
+      - MITOMAP_LINK_DATA__REFERENCE_ROOT=/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-H", "Host: localhost", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    read_only: true
+    # GeneFoundry deploy contract: the fleet controller (strato_v6_docker_npm,
+    # scripts/utils/deployment_preflight.py) accepts a declared user only as numeric
+    # non-root, and its runtime observer proves the effective uid from /proc.
+    # This is THIS image's own uid:gid (docker/Dockerfile) -- sibling -link images differ.
+    user: "10001:10001"
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m,mode=1777
+    volumes:
+      - mitomap-reference:/data:ro
+    networks:
+      - mitomap_link_internal_net
+      - npm_proxy_network
+    deploy:
+      resources:
+        limits:
+          memory: ${MITOMAP_API_MEMORY_LIMIT:-512m}
+          cpus: ${MITOMAP_API_CPU_LIMIT:-1.0}
+          pids: 256
+        reservations:
+          memory: 128m
+          cpus: 0.25
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+        labels: "service=mitomap-link,environment=production,proxy=npm"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    init: true
+
+volumes:
+  mitomap-reference:
+
+networks:
+  mitomap_link_internal_net:
+    driver: bridge
+    name: mitomap_link_internal_net
+  npm_proxy_network:
+    external: true
+    name: ${NPM_SHARED_NETWORK_NAME:-npm_default}

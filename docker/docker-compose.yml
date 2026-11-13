@@ -1,0 +1,115 @@
+name: mitomap-link
+
+services:
+  # The only authoritative-data writer. It verifies the exact pinned GitHub data
+  # release (mitomap_link/store/pin.py) into a named volume and exits before the
+  # request-facing app starts.
+  mitomap-data-init:
+    build: &build
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: production
+      args:
+        APP_VERSION: ${APP_VERSION:-0.0.0}
+        VCS_REF: ${VCS_REF:-0000000000000000000000000000000000000000}
+        BUILD_DATE: ${BUILD_DATE:-1970-01-01T00:00:00Z}
+    image: mitomap-link:latest
+    entrypoint: ["mitomap-link-data"]
+    command: ["materialize"]
+    environment:
+      MITOMAP_LINK_DATA__REFERENCE_ROOT: /data
+    volumes:
+      - mitomap-reference:/data
+    networks:
+      - mitomap-network
+    restart: "no"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1.0"
+          pids: 256
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  mitomap-link:
+    build: *build
+    image: mitomap-link:latest
+    container_name: mitomap-link
+    # Dev/local only — loopback-bound (127.0.0.1) so copying this file to a
+    # server never publishes the unauthenticated backend on the public IP.
+    # Production fronts the container with a reverse proxy via the prod/npm
+    # overlays (ports: !reset []). Backends are unauthenticated by design.
+    ports:
+      - "127.0.0.1:${MITOMAP_LINK_HOST_PORT:-8000}:8000"
+    depends_on:
+      mitomap-data-init:
+        condition: service_completed_successfully
+    env_file:
+      - path: ../.env
+        required: false
+      - path: ../.env.docker
+        required: false
+    environment:
+      MITOMAP_LINK_HOST: 0.0.0.0
+      MITOMAP_LINK_PORT: 8000
+      MITOMAP_LINK_TRANSPORT: unified
+      MITOMAP_LINK_MCP_PATH: /mcp
+      MITOMAP_LINK_ALLOWED_HOSTS: '["localhost","127.0.0.1","::1"]'
+      MITOMAP_LINK_LOG_LEVEL: INFO
+      MITOMAP_LINK_LOG_FORMAT: json
+      MITOMAP_LINK_DATA__REFERENCE_ROOT: /data
+    # The app cannot alter the selected reference snapshot.
+    volumes:
+      - mitomap-reference:/data:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-H", "Host: localhost", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    # Container & Deployment Hardening Standard v1: read-only rootfs; the only
+    # writable path is a size-capped tmpfs (TMPDIR=/tmp in the image).
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    # Limits only as deploy.resources.limits (Compose v2); see the router's
+    # reference compose for why the legacy aliases are not set alongside them.
+    pids_limit: 256
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1.0"
+          pids: 256
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - mitomap-network
+
+volumes:
+  mitomap-reference:
+
+networks:
+  mitomap-network:
+    driver: bridge

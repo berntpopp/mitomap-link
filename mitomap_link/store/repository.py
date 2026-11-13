@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import difflib
 import re
 import sqlite3
 from pathlib import Path
@@ -50,7 +51,11 @@ class Repository:
     def __init__(self, path: Path) -> None:
         """Open ``path`` read-only and index the locus vocabulary."""
         try:
-            self._conn = sqlite3.connect(f"file:{path}?mode=ro&immutable=1", uri=True)
+            # Opened in a worker thread, queried on the event loop; read-only + immutable
+            # makes sharing the connection safe.
+            self._conn = sqlite3.connect(
+                f"file:{path}?mode=ro&immutable=1", uri=True, check_same_thread=False
+            )
             self._conn.row_factory = sqlite3.Row
             self.meta: dict[str, str] = dict(self._conn.execute("SELECT key, value FROM meta"))
             loci = [r[0] for r in self._conn.execute("SELECT DISTINCT locus FROM variant")]
@@ -67,6 +72,18 @@ class Repository:
         """Every gene/region token that search_variants(locus=) accepts."""
         return sorted(self._locus_index)
 
+    def counts(self) -> dict[str, int]:
+        """Record counts per kind, plus references."""
+        out = {
+            k: int(n)
+            for k, n in self._conn.execute("SELECT kind, COUNT(*) FROM variant GROUP BY kind")
+        }
+        out["disease_mutations"] = out.get("mutation_coding_control", 0) + out.get(
+            "mutation_rna", 0
+        )
+        out["references"] = int(self._conn.execute("SELECT COUNT(*) FROM reference").fetchone()[0])
+        return out
+
     def check_reference(self, query: VariantQuery) -> None:
         """Reject a ref allele that contradicts a rCRS base the snapshot knows."""
         if query.ref is None:
@@ -81,6 +98,7 @@ class Repository:
                     field="variant",
                     allowed=[row[0]] if len(query.ref) == 1 else None,
                     hint="Check the reference allele; positions are rCRS, not RSRS or hg18.",
+                    reason="reference_mismatch",
                 )
 
     def _references(self, variant_id: str) -> list[dict[str, Any]]:
@@ -94,11 +112,12 @@ class Repository:
 
     def find(self, query: VariantQuery) -> list[dict[str, Any]]:
         """Every MITOMAP record for this exact allele (mutation and/or polymorphism)."""
+        args: tuple[object, ...]
         if query.allele is not None:
             sql, args = "SELECT * FROM variant WHERE allele = ?", (query.allele,)
         else:
             sql = "SELECT * FROM variant WHERE position = ? AND ref = ? AND alt = ?"
-            args = (query.position, query.ref, query.alt)  # type: ignore[assignment]
+            args = (query.position, query.ref, query.alt)
         records = [dict(row) for row in self._conn.execute(f"{sql} ORDER BY kind, id", args)]
         for record in records:
             record["references"] = self._references(record["id"])
@@ -124,8 +143,9 @@ class Repository:
         position_end: int | None = None,
         limit: int,
         offset: int,
+        with_references: bool = False,
     ) -> tuple[list[dict[str, Any]], int]:
-        """One page of matching records and the honest total."""
+        """One page of matching records (optionally with references) and the honest total."""
         where: list[str] = []
         args: list[Any] = []
         if record_type == "disease_mutation":
@@ -140,13 +160,14 @@ class Repository:
                     field="locus",
                     hint="Use an MT- gene/region symbol such as MT-TL1 or MT-ATP6.",
                     did_you_mean=_close(locus, self.loci),
+                    reason="unknown_locus",
                 )
             where.append(f"locus IN ({', '.join('?' * len(names))})")
             args += names
-        if disease_query:
-            escaped = re.sub(r"([\\%_])", r"\\\1", disease_query.strip())
-            where.append("disease LIKE ? ESCAPE '\\'")
-            args.append(f"%{escaped}%")
+        terms = [t.strip() for t in (disease_query or "").split("|") if t.strip()][:5]
+        if terms:
+            where.append("(" + " OR ".join(["disease LIKE ? ESCAPE '\\'"] * len(terms)) + ")")
+            args += [f"%{re.sub(r'([\\%_])', r'\\\1', term)}%" for term in terms]
         if status is not None:
             where.append("status LIKE ?")
             args.append(f"{STATUS_PREFIX[status]}%")
@@ -163,10 +184,12 @@ class Repository:
             "ORDER BY position, kind, id LIMIT ? OFFSET ?",
             [*args, limit, offset],
         )
-        return [dict(row) for row in rows], int(total)
+        page = [dict(row) for row in rows]
+        if with_references:
+            for record in page:
+                record["references"] = self._references(record["id"])
+        return page, int(total)
 
 
 def _close(value: str, vocabulary: list[str]) -> list[str]:
-    import difflib
-
     return difflib.get_close_matches(value.strip().upper(), vocabulary, n=3, cutoff=0.6)

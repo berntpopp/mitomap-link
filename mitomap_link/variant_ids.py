@@ -37,11 +37,12 @@ class VariantQuery:
     allele: str | None = None
 
 
-def _invalid(message: str, *, allowed: list[str] | None = None) -> InvalidInputError:
+def _invalid(message: str, reason: str, *, allowed: list[str] | None = None) -> InvalidInputError:
     return InvalidInputError(
         message,
         field="variant",
         allowed=allowed,
+        reason=reason,
         hint="Use rCRS HGVS such as m.3243A>G (or NC_012920.1:m.3243A>G, MT-3243-A-G).",
     )
 
@@ -49,9 +50,12 @@ def _invalid(message: str, *, allowed: list[str] | None = None) -> InvalidInputE
 def _substitution(position: str, ref: str, alt: str) -> VariantQuery:
     pos, ref, alt = int(position), ref.upper(), alt.upper()
     if not 1 <= pos <= MT_LENGTH:
-        raise _invalid(f"rCRS position must be 1-{MT_LENGTH}.")
+        raise _invalid(f"rCRS position must be 1-{MT_LENGTH}.", "position_out_of_range")
     if ref == alt or len(ref) != len(alt):
-        raise _invalid("ref and alt must differ and have equal length (use HGVS for indels).")
+        raise _invalid(
+            "ref and alt must differ and have equal length (use HGVS for indels).",
+            "invalid_substitution",
+        )
     return VariantQuery(pos, ref, alt)
 
 
@@ -67,22 +71,28 @@ def _body(text: str, *, qualified: bool) -> VariantQuery:
     if match := _INDEL.match(text):
         start, end, kind, bases = match.groups()
         if not 1 <= int(start) <= MT_LENGTH:
-            raise _invalid(f"rCRS position must be 1-{MT_LENGTH}.")
+            raise _invalid(f"rCRS position must be 1-{MT_LENGTH}.", "position_out_of_range")
         allele = f"m.{start}{end or ''}{kind.lower()}{bases.upper()}"
         return VariantQuery(int(start), None, None, allele=allele)
-    raise _invalid("Unrecognized mitochondrial variant notation.")
+    raise _invalid("Unrecognized mitochondrial variant notation.", "unrecognized_notation")
 
 
 def parse_variant(variant: str) -> VariantQuery:
     """Parse caller variant text onto rCRS coordinates (raises InvalidInputError)."""
     text = variant.strip()
+    if re.fullmatch(r"rs\d+", text, re.IGNORECASE):
+        raise _invalid("dbSNP ids are not MITOMAP identifiers.", "dbsnp_id")
     if match := _DASHED.match(text):
         return _substitution(*match.groups())
     if match := _PREFIXED.match(text):
         label, rest = match.group(1).lower(), match.group(2).strip()
         if label in _CHROM_ALIASES or label in _RCRS_PREFIXES:
             return _body(rest, qualified=True)
-        raise _invalid("Only the rCRS reference is supported.", allowed=RCRS_ACCESSIONS)
+        raise _invalid(
+            "Only the rCRS reference is supported.",
+            "unsupported_reference",
+            allowed=RCRS_ACCESSIONS,
+        )
     return _body(text, qualified=False)
 
 
