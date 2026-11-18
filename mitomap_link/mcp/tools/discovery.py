@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Annotated, Any, Literal
 
+from fastmcp.tools import ToolResult
 from pydantic import Field
 
 from mitomap_link.config import settings
@@ -41,7 +42,7 @@ def register_discovery_tools(mcp: FastMCP) -> None:
             Literal["summary", "full"],
             Field(description="summary (default) or full (adds usage notes)."),
         ] = "summary",
-    ) -> dict[str, Any]:
+    ) -> dict[str, Any] | ToolResult:
         async def call() -> dict[str, Any]:
             return project_capabilities(detail, await collect_tool_signatures(mcp))
 
@@ -64,7 +65,7 @@ def register_discovery_tools(mcp: FastMCP) -> None:
             "version or diagnose an upstream_unavailable error. Signature: get_diagnostics()."
         ),
     )
-    async def get_diagnostics() -> dict[str, Any]:
+    async def get_diagnostics() -> dict[str, Any] | ToolResult:
         async def call() -> dict[str, Any]:
             release = {"expected": expected_identity(settings.data), "observed": None}
             try:

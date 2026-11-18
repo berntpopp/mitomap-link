@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Annotated, Any
 
+from fastmcp.tools import ToolResult
 from pydantic import Field
 
 from mitomap_link.constants import (
@@ -93,7 +94,7 @@ def register_variant_tools(mcp: FastMCP) -> None:
             ),
         ],
         response_mode: ResponseMode = "compact",
-    ) -> dict[str, Any]:
+    ) -> dict[str, Any] | ToolResult:
         async def call() -> dict[str, Any]:
             query = parse_variant(variant)
             repo = await get_repository()
@@ -186,7 +187,7 @@ def register_variant_tools(mcp: FastMCP) -> None:
         ] = 20,
         offset: Annotated[int, Field(ge=0, description="Rows to skip (default 0).")] = 0,
         response_mode: ResponseMode = "compact",
-    ) -> dict[str, Any]:
+    ) -> dict[str, Any] | ToolResult:
         async def call() -> dict[str, Any]:
             if position_start and position_end and position_start > position_end:
                 raise InvalidInputError(

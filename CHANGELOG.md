@@ -6,6 +6,18 @@ All notable changes to mitomap-link are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-18
+
+### Changed
+
+- Upgrade FastMCP 3.4 → 4.2.2 and MCP SDK 1.x → 2.x; supports the 2026-07-28 sessionless
+  protocol era alongside the legacy handshake (new test drives `server/discover` →
+  `tools/list` → `tools/call` over HTTP).
+- Not-found reflection guard Layer 3 ported to the SDK 2 request-handler API
+  (`get_request_handler`/`add_request_handler`); resource/prompt failures still answer with
+  the fixed, input-free message as JSON-RPC `-32602`.
+- `httpx2`/`httpcore2` loggers tamed to WARNING alongside `httpx`/`httpcore`.
+
 ## [0.1.3] - 2026-11-13
 
 ### Changed
