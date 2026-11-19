@@ -216,3 +216,37 @@ async def test_hint_only_points_at_allowed_values_when_present(
     assert "allowed_values" not in env and "allowed_values" not in env["hint"]
     env = await _call(facade, structured, "get_variant", {"variant": "m.3243C>G"})
     assert env["allowed_values"] == ["A"] and "allowed_values" in env["hint"]
+
+
+async def test_get_variant_description_fields_returned_at_default_mode(
+    facade: Any, structured: Any
+) -> None:
+    """Contract truth: what the description promises comes back at the default mode."""
+    tool = next(t for t in await facade.list_tools() if t.name == "get_variant")
+    lead = (tool.description or "").split("Accepts")[0]
+    env = await _call(facade, structured, "get_variant", {"variant": "m.3243A>G"})
+    record = env["records"][0]
+    promised = {
+        "locus": "locus",
+        "disease": "disease",
+        "MITOMAP status": "mitomap_status",
+        "homoplasmy": "plasmy_reported",
+        "GenBank": "genbank",
+        "reference count": "reference_count",
+    }
+    for phrase, key in promised.items():
+        assert phrase in lead, phrase
+        assert key in record, key
+    # PMIDs are promised only for the modes that return them.
+    assert "PMIDs" not in lead.replace("PMIDs at response_mode=standard|full", "")
+
+
+async def test_empty_search_says_why(facade: Any, structured: Any) -> None:
+    """A zero-hit search explains MITOMAP's abbreviated disease text (no silent empty)."""
+    env = await _call(
+        facade, structured, "search_variants", {"disease_query": "Leber hereditary optic"}
+    )
+    assert env["total"] == 0
+    assert "LHON" in env["absence_note"]
+    hit = await _call(facade, structured, "search_variants", {"disease_query": "MELAS"})
+    assert hit["total"] > 0 and "absence_note" not in hit
