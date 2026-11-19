@@ -6,6 +6,24 @@ All notable changes to mitomap-link are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-19
+
+### Added
+
+- `search_variants` returns an `absence_note` when nothing matches, saying that
+  `disease_query` matches MITOMAP's abbreviated disease text (`LHON`, not the full
+  name) and that `record_type='any'` adds polymorphisms. A full-name disease query
+  used to come back empty with no explanation.
+- A guard test that every `_meta.next_commands` hint names a real tool and real
+  argument names (own tools from the live schemas; `gnomad_get_mitochondrial_variant`
+  from a pinned sibling signature).
+
+### Fixed
+
+- Contract truth: the `get_variant` description and server instructions promised PMIDs,
+  which the default `compact` mode does not return. They now say "reference count"
+  (PMIDs at `response_mode=standard|full`), and a test checks this.
+
 ## [0.2.1] - 2026-11-18
 
 ### Security

@@ -28,6 +28,9 @@ search_variants(locus="ATP6", sort_by="reference_count")          → most-publi
 search_variants(disease_query="Leigh|NARP|MILS", status="confirmed", limit=50)
 search_variants(position_start=8527, position_end=9207, record_type="any")
 ```
+`disease_query` matches MITOMAP's own disease text, which mostly uses abbreviations
+(`LHON`, not "Leber hereditary optic neuropathy"). A search with no match returns
+`total: 0` and an `absence_note` saying so.
 
 **A haplogroup marker / benign polymorphism**
 ```

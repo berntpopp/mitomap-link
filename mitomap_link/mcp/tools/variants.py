@@ -47,6 +47,11 @@ ABSENCE_NOTE = (
     "That is not evidence of benignity or pathogenicity; check gnomAD (next_commands) and the "
     "other alleles MITOMAP records at this position."
 )
+EMPTY_SEARCH_NOTE = (
+    "No MITOMAP record matches every filter. disease_query is a substring of MITOMAP's own "
+    "disease text, which mostly uses abbreviations (LHON, MELAS, MERRF, NARP, KSS, CPEO, "
+    "MIDD, DEAF) rather than full names; record_type='any' also searches polymorphisms."
+)
 
 
 def _provenance(payload: dict[str, Any], repo: Repository) -> dict[str, Any]:
@@ -74,7 +79,8 @@ def register_variant_tools(mcp: FastMCP) -> None:
             "MITOMAP record for it (coding/control-region or rRNA/tRNA disease mutation, "
             "polymorphism) with locus, disease, MITOMAP status verbatim ('Reported', 'Cfrm' = "
             "confirmed; a bracketed ClinGen VCEP rating is split out), homoplasmy/heteroplasmy "
-            "as reported, GenBank count/frequency and PMIDs. Accepts m.3243A>G, "
+            "as reported, GenBank count/frequency and reference count (PMIDs at "
+            "response_mode=standard|full). Accepts m.3243A>G, "
             "NC_012920.1:m.3243A>G, MT-3243-A-G, chrM:3243 A>G, A3243G, and HGVS indels "
             "(m.5133_5134del, exact MITOMAP allele match). Other mito references (Yoruba "
             "NC_001807, RSRS) and rCRS reference-base mismatches are rejected. An allele "
@@ -211,8 +217,10 @@ def register_variant_tools(mcp: FastMCP) -> None:
             )
             page = [project_record(r, response_mode, repo.meta) for r in rows]
             more = offset + len(page) < total
+            note = {"absence_note": EMPTY_SEARCH_NOTE} if total == 0 else {}
             return _provenance(
                 {
+                    **note,
                     "results": page,
                     "total": total,
                     "returned": len(page),
