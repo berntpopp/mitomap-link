@@ -68,7 +68,12 @@ async def test_search_by_locus_pages_honestly(facade: Any, structured: Any) -> N
     env = await _call(facade, structured, "search_variants", {"locus": "MT-ATP6", "limit": 1})
     assert env["total"] >= 2 and env["returned"] == 1 and env["truncated"] is True
     assert env["next_offset"] == 1
-    assert env["_meta"]["pagination"] == {"total_count": env["total"], "has_more": True}
+    assert env["_meta"]["pagination"] == {
+        "total_count": env["total"],
+        "has_more": True,
+        "next_cursor": None,
+        "next_offset": env["next_offset"],
+    }
 
 
 async def test_search_unknown_locus_rejected(facade: Any, structured: Any) -> None:
