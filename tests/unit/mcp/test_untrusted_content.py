@@ -75,7 +75,7 @@ async def test_hostile_source_prose_is_fenced_on_the_wire(
         args = {"variant": "m.11778G>A", "response_mode": "full"}
         res = await mcp.call_tool("get_variant", args)
         env = structured(res)  # type: ignore[operator]
-        record = next(r for r in env["records"] if r["references"])
+        record = next(r for r in env["results"] if r["references"])
         for ref in record["references"]:
             fenced = ref["title"]
             assert fenced["kind"] == "untrusted_text"
@@ -83,11 +83,11 @@ async def test_hostile_source_prose_is_fenced_on_the_wire(
             assert fenced["raw_sha256"] == hashlib.sha256(HOSTILE.encode()).hexdigest()
         # The TextContent mirror carries the same fenced objects, never bare prose.
         mirror = json.loads(res.content[0].text)
-        mirror_record = next(r for r in mirror["records"] if r["references"])
+        mirror_record = next(r for r in mirror["results"] if r["references"])
         assert mirror_record["references"][0]["title"]["kind"] == "untrusted_text"
         compact = structured(  # type: ignore[operator]
             await mcp.call_tool("get_variant", {"variant": "m.11778G>A"})
         )
-        assert all("references" not in r for r in compact["records"])
+        assert all("references" not in r for r in compact["results"])
     finally:
         set_repository(None)

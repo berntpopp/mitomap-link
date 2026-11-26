@@ -7,6 +7,11 @@ Must equal ``container-release.json`` ``data.release_tag``/``data.digest``
 RELEASE_TAG = "data-mitomap-a6646827e6157779"
 COMPRESSED_SHA256 = "c76206df08fc62fe9c0fea7e60e4f527e5285eadb95ebb9edd36248668d85084"
 EXPANDED_SHA256 = "a6646827e6157779d0bb3988634e6aa488abf8bbeb338739a5fddf793acdaef1"
+# When the data-release run downloaded the MITOMAP dump (RFC 3339 UTC); served as
+# `_meta.retrieved_at`. The snapshot itself holds no wall-clock value, so bump this with the pin.
+# ponytail: a development `LOCAL_DATABASE` override reports this time too; store it in the
+# snapshot meta if overrides ever serve real data.
+RETRIEVED_AT = "2026-11-13T09:13:31Z"
 BUNDLE_URL = (
     f"https://github.com/berntpopp/mitomap-link/releases/download/{RELEASE_TAG}/mitomap.sqlite.gz"
 )

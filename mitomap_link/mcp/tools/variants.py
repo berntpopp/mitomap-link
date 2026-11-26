@@ -20,6 +20,7 @@ from mitomap_link.mcp.envelope import McpErrorContext, run_mcp_tool
 from mitomap_link.mcp.next_commands import after_search, after_variant
 from mitomap_link.mcp.service_adapters import get_repository
 from mitomap_link.mcp.shaping import ResponseModeValue, project_record
+from mitomap_link.store.pin import RETRIEVED_AT
 from mitomap_link.store.repository import RecordType, SortBy, StatusCategory
 from mitomap_link.variant_ids import MT_LENGTH, gnomad_variant_id, hgvs, parse_variant
 
@@ -61,6 +62,7 @@ def _provenance(payload: dict[str, Any], repo: Repository) -> dict[str, Any]:
         **payload.get("_meta", {}),
         "source": SOURCE_NAME,
         "data_version": f"mitomap-dump@{repo.meta.get('source_last_modified', 'unknown')}",
+        "retrieved_at": RETRIEVED_AT,
     }
     return payload
 
@@ -118,7 +120,7 @@ def register_variant_tools(mcp: FastMCP) -> None:
                     "gnomad_variant_id": gnomad_id,
                 },
                 "found": found,
-                "records": [project_record(r, response_mode, repo.meta) for r in records],
+                "results": [project_record(r, response_mode, repo.meta) for r in records],
             }
             if not found:
                 payload["absence_note"] = ABSENCE_NOTE
