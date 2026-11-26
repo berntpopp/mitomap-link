@@ -257,6 +257,7 @@ def build_arg_error_envelope(
             "_meta": {
                 "tool": tool_name,
                 "request_id": _request_id(),
+                "elapsed_ms": 0.0,  # rejected at argument binding, before the tool ran
                 "next_commands": [cmd("get_server_capabilities")],
                 "unsafe_for_clinical_use": _UNSAFE_FOR_CLINICAL_USE,
             },
@@ -304,6 +305,7 @@ async def run_mcp_tool(
         return result
     except Exception as exc:  # broad catch is the error-boundary contract
         envelope = _error_envelope(exc, ctx)
+        envelope["_meta"]["elapsed_ms"] = round((time.perf_counter() - started) * 1000, 1)
         logger.warning(
             "mcp_tool_error tool=%s code=%s exc=%s",
             tool_name,

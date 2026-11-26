@@ -54,7 +54,8 @@ so an unchanged snapshot is never published twice. Publication waits on the
 `data-release` environment (owner approval, `main` only).
 
 To ship a new snapshot: dispatch the workflow, approve the gate, then in a reviewed PR set
-`mitomap_link/store/pin.py` and `container-release.json` `data.release_tag`/`data.digest`
+`mitomap_link/store/pin.py` (with `RETRIEVED_AT`, the start time of the workflow's download
+step, served as `_meta.retrieved_at`) and `container-release.json` `data.release_tag`/`data.digest`
 to the new release (`tests/unit/test_release_contract.py` checks they agree) and cut a new
 application release.
 

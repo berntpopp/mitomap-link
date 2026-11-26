@@ -68,6 +68,6 @@ async def test_full_adds_fields_over_compact(facade: Any, structured: Any) -> No
     args = {"variant": "m.11778G>A"}
     compact = structured(await facade.call_tool("get_variant", args))
     full = structured(await facade.call_tool("get_variant", {**args, "response_mode": "full"}))
-    record = next(r for r in full["records"] if r["references"])
-    assert "references" not in compact["records"][0]
-    assert set(record) > set(compact["records"][0])
+    record = next(r for r in full["results"] if r["references"])
+    assert "references" not in compact["results"][0]
+    assert set(record) > set(compact["results"][0])

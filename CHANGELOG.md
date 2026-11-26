@@ -6,6 +6,22 @@ All notable changes to mitomap-link are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-26
+
+### Changed
+
+- **Response shape:** `get_variant` returns its records under `results` (Response-Envelope
+  Standard v1 §1 allows only `results` or `result` as the payload key); the key was `records`.
+
+### Added
+
+- `_meta.elapsed_ms` on error envelopes too.
+- `_meta.retrieved_at` on every successful data result (Response-Envelope Standard v1.2, #16):
+  the time the pinned snapshot's MITOMAP dump was downloaded, kept in `store/pin.py` beside the
+  data release pin. `source` and `data_version` were already there.
+- Every data tool's result is validated against the published envelope schema v1.2.0 in the
+  test suite; the vendored behaviour gate checks the provenance rule.
+
 ## [0.3.0] - 2026-11-19
 
 ### Added

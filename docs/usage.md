@@ -14,7 +14,7 @@
 **A known variant**
 ```
 get_variant(variant="m.3243A>G")
-→ records[0]: record_type mutation_rna, locus MT-TL1, disease "MELAS / Leigh Syndrome / ...",
+→ results[0]: record_type mutation_rna, locus MT-TL1, disease "MELAS / Leigh Syndrome / ...",
   mitomap_status "Cfrm [P]" (mitomap_status_category confirmed,
   clingen_classification_in_status "P"), plasmy_reported {homoplasmy "-", heteroplasmy "+"},
   genbank.full_length {count, total_sequences, frequency}, pmids
@@ -88,7 +88,7 @@ An allele MITOMAP does not list returns `found: false`, an `absence_note` and
 ## Envelope
 
 Success: `{success: true, ..., recommended_citation, license, _meta}`; `_meta` carries
-`tool`, `request_id`, `elapsed_ms`, `source`, `data_version`, `next_commands` and
+`tool`, `request_id`, `elapsed_ms`, `source`, `data_version`, `retrieved_at`, `next_commands` and
 `unsafe_for_clinical_use`. Search pages carry `total`, `returned`, `offset`, `truncated`,
 `next_offset` and `_meta.pagination`. Errors set MCP `isError: true` and carry `error_code`
 (closed enum), a fixed `message`, `field`/`allowed_values` where useful, `retryable`,

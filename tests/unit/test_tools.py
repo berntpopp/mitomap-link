@@ -20,7 +20,7 @@ async def test_get_variant_melas(facade: Any, structured: Any) -> None:
     assert env["success"] is True and env["found"] is True
     assert env["query"]["hgvs"] == "m.3243A>G"
     assert env["query"]["reference_sequence"] == "NC_012920.1"
-    mutation = next(r for r in env["records"] if r["record_type"] == "mutation_rna")
+    mutation = next(r for r in env["results"] if r["record_type"] == "mutation_rna")
     assert mutation["locus"] == "MT-TL1"
     assert mutation["mitomap_status"] == "Cfrm [P]"
     assert mutation["mitomap_status_category"] == "confirmed"
@@ -38,14 +38,14 @@ async def test_get_variant_melas(facade: Any, structured: Any) -> None:
 
 async def test_polymorphism_disease_stays_missing(facade: Any, structured: Any) -> None:
     env = await _call(facade, structured, "get_variant", {"variant": "m.73A>G"})
-    [record] = env["records"]
+    [record] = env["results"]
     assert record["record_type"] == "polymorphism"
     assert record["disease"] is None and record["mitomap_status"] is None
 
 
 async def test_absent_variant_is_honest_empty(facade: Any, structured: Any) -> None:
     env = await _call(facade, structured, "get_variant", {"variant": "m.16000A>G"})
-    assert env["success"] is True and env["found"] is False and env["records"] == []
+    assert env["success"] is True and env["found"] is False and env["results"] == []
     assert "not evidence" in env["absence_note"]
 
 
@@ -60,7 +60,7 @@ async def test_references_fenced_at_standard(facade: Any, structured: Any) -> No
     env = await _call(
         facade, structured, "get_variant", {"variant": "m.11778G>A", "response_mode": "standard"}
     )
-    ref = next(r for r in env["records"] if r["references"])["references"][0]
+    ref = next(r for r in env["results"] if r["references"])["references"][0]
     assert ref["title"]["kind"] == "untrusted_text"
 
 
@@ -141,8 +141,8 @@ async def test_standard_mode_keeps_pmids_for_full(facade: Any, structured: Any) 
     args = {"variant": "m.11778G>A"}
     standard = await _call(facade, structured, "get_variant", {**args, "response_mode": "standard"})
     full = await _call(facade, structured, "get_variant", {**args, "response_mode": "full"})
-    assert all("pmids" not in r for r in standard["records"])
-    assert any(r.get("pmids") for r in full["records"])
+    assert all("pmids" not in r for r in standard["results"])
+    assert any(r.get("pmids") for r in full["results"])
 
 
 async def test_disease_query_accepts_alternatives(facade: Any, structured: Any) -> None:
@@ -161,9 +161,9 @@ async def test_disease_text_is_fenced_at_every_mode(facade: Any, structured: Any
         env = await _call(
             facade, structured, "get_variant", {"variant": "m.3243A>G", "response_mode": mode}
         )
-        disease = env["records"][0]["disease"]
+        disease = env["results"][0]["disease"]
         assert disease["kind"] == "untrusted_text" and "MELAS" in disease["text"]
-        assert disease["provenance"]["record_id"] == env["records"][0]["mitomap_record_id"]
+        assert disease["provenance"]["record_id"] == env["results"][0]["mitomap_record_id"]
 
 
 def test_full_mode_caps_fenced_reference_objects() -> None:
@@ -202,11 +202,11 @@ async def test_control_region_count_is_not_applicable_outside_it(
     facade: Any, structured: Any
 ) -> None:
     env = await _call(facade, structured, "get_variant", {"variant": "m.3243A>G"})
-    cr = env["records"][0]["genbank"]["control_region"]
+    cr = env["results"][0]["genbank"]["control_region"]
     assert cr["count"] is None and cr["status"] == "outside_control_region"
     assert "frequency" not in cr
     env = await _call(facade, structured, "get_variant", {"variant": "m.73A>G"})
-    assert env["records"][0]["genbank"]["control_region"]["count"] > 0
+    assert env["results"][0]["genbank"]["control_region"]["count"] > 0
 
 
 async def test_hint_only_points_at_allowed_values_when_present(
@@ -225,7 +225,7 @@ async def test_get_variant_description_fields_returned_at_default_mode(
     tool = next(t for t in await facade.list_tools() if t.name == "get_variant")
     lead = (tool.description or "").split("Accepts")[0]
     env = await _call(facade, structured, "get_variant", {"variant": "m.3243A>G"})
-    record = env["records"][0]
+    record = env["results"][0]
     promised = {
         "locus": "locus",
         "disease": "disease",
